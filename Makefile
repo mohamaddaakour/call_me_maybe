@@ -1,0 +1,36 @@
+.PHONY: install run debug clean lint lint-strict
+
+install:
+	uv sync
+
+run:
+	uv run python -m src \
+		--functions_definition $(FUNCTIONS_DEF) \
+		--input $(INPUT) \
+		--output $(OUTPUT)
+
+debug:
+	uv run python -m pdb -m src \
+		--functions_definition $(FUNCTIONS_DEF) \
+		--input $(INPUT) \
+		--output $(OUTPUT)
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -name "*.pyc" -delete 2>/dev/null || true
+	find . -name "*.pyo" -delete 2>/dev/null || true
+
+lint:
+	uv run flake8 src/
+	uv run mypy src/ \
+		--warn-return-any \
+		--warn-unused-ignores \
+		--ignore-missing-imports \
+		--disallow-untyped-defs \
+		--check-untyped-defs
+
+lint-strict:
+	uv run flake8 src/
+	uv run mypy src/ --strict
