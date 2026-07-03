@@ -52,3 +52,9 @@ print(ord("!"))
 # to convert from ascii code number into character
 print(chr(b))
 ```
+
+```python
+# this will give us the value of token_id key in id_to_decoded
+# if it didn't find such key it will return ""
+id_to_decoded.get(token_id, "")
+```
