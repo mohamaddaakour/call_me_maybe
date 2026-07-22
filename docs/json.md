@@ -1,11 +1,11 @@
 ```python
-# this will write in the file named fh the serialisable content
-# indent=2 will make the output clear and readable
-# ensure_ascii=False ensure that the ascii will stay the same
-json.dump(serialisable, fh, indent=2, ensure_ascii=False)
+# Reads a JSON file and converts its contents into Python objects.
+json.load(input_file)
 ```
 
 ```python
-# reads JSON data from a file object (fh) and parses it into a Python object
-json.load(fh)
+# This writes payload (a JSON-serializable Python object, e.g. that list of dicts)
+# to a file as formatted JSON text.
+
+json.dump(payload, output_file, ensure_ascii=False, indent=2)
 ```

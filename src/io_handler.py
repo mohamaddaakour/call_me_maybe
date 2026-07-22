@@ -1,155 +1,162 @@
-from src.models import (
-    FunctionCallResult,
-    FunctionDefinition,
-    FunctionDefinitions,
-    PromptEntry,
-)
+"""Safe JSON input and output operations."""
 
-from pydantic import ValidationError
-from typing import Optional, List
-import os
-import sys
 import json
+from pathlib import Path
+from typing import Any, TypeVar
 
-# to load the data in function_definitions file
-def load_function_definitions(path: str) -> Optional[List[FunctionDefinition]]:
-    """Load and validate the functions_definition.json file."""
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
-    if not os.path.exists(path):
-        print(
-            f"[Error] Function definitions file not found: {path}",
-            file=sys.stderr
-        )
-        return None
+from .errors import InputFileError, OutputFileError
+from .models import FunctionCallResult, FunctionDefinition, PromptRecord
 
+ModelType = TypeVar("ModelType", bound=BaseModel)
+
+
+def read_json(path: Path) -> Any:
+    """Read and decode a UTF-8 JSON file.
+
+    Args:
+        path: File to read.
+
+    Returns:
+        The decoded JSON value.
+
+    Raises:
+        InputFileError: If the file cannot be read or is not valid JSON.
+    """
     try:
-        with open(path, "r", encoding="utf-8") as fh:
-            raw = json.load(fh)
-    except json.JSONDecodeError as exc:
-        print(
-            f"[ERROR] functions_definition.json contains invalid JSON: {exc}",
-            file=sys.stderr,
-        )
-        return None
-    except OSError as exc:
-        print(
-            f"[ERROR] Could not read functions_definition.json: {exc}",
-            file=sys.stderr,
-        )
-        return None
+        with path.open("r", encoding="utf-8") as input_file:
+            return json.load(input_file)
+    except FileNotFoundError as error:
+        raise InputFileError(f"input file not found: {path}") from error
+    except PermissionError as error:
+        raise InputFileError(
+            f"permission denied while reading: {path}"
+        ) from error
+    except IsADirectoryError as error:
+        raise InputFileError(
+            f"expected a file but found a directory: {path}"
+        ) from error
+    except UnicodeDecodeError as error:
+        raise InputFileError(
+            f"input file is not valid UTF-8: {path}"
+        ) from error
+    except json.JSONDecodeError as error:
+        location = f"line {error.lineno}, column {error.colno}"
+        raise InputFileError(
+            f"invalid JSON in {path} at {location}: {error.msg}"
+        ) from error
+    except OSError as error:
+        raise InputFileError(f"could not read {path}: {error}") from error
 
-    if not isinstance(raw, list):
-        print(
-            "[ERROR] functions_definition.json must be a JSON array at the top level.",
-            file=sys.stderr,
-        )
-        return None
 
+def validate_list(
+    raw_data: Any,
+    model_type: type[ModelType],
+    path: Path,
+    record_label: str,
+) -> list[ModelType]:
+    """Validate a decoded top-level JSON array with pydantic.
+
+    Args:
+        raw_data: Decoded JSON value.
+        model_type: Pydantic model required for each item.
+        path: Source path used in error messages.
+        record_label: Human-readable name for an array item.
+
+    Returns:
+        A list of validated models.
+
+    Raises:
+        InputFileError: If the top level or one of its records is invalid.
+    """
+    if not isinstance(raw_data, list):
+        raise InputFileError(f"{path} must contain a top-level JSON array")
+    
     try:
-        # validated is an object of FunctionDefinitions pydantic model
-        validated = FunctionDefinitions.model_validate({
-            "functions": raw
-        })
-    except ValidationError as exc:
-        print(
-            f"[ERROR] functions_definition.json failed schema validation:\n{exc}",
-            file=sys.stderr,
+        # TypeAdapter is used in pydantic to validate any python data type
+        # including lists elements
+        adapter: TypeAdapter[list[ModelType]] = TypeAdapter(
+            list[model_type]
         )
-        return None
 
-    print(
-        f"[INFO] Loaded {len(validated.functions)} function definition(s) from '{path}'."
+        return adapter.validate_python(raw_data)
+    except ValidationError as error:
+        details = error.errors(include_url=False)
+        first_error = details[0]
+        location = ".".join(str(part) for part in first_error["loc"])
+        message = first_error["msg"]
+
+        # we used from error because this InputFilterError happens
+        # because of ValidationError
+        raise InputFileError(
+            f"invalid {record_label} in {path} at {location}: {message}"
+        ) from error
+
+
+def load_function_definitions(path: Path) -> list[FunctionDefinition]:
+    """Load function definitions and reject duplicate names.
+
+    Args:
+        path: JSON file containing function definitions.
+
+    Returns:
+        Validated function definitions in input order.
+
+    Raises:
+        InputFileError: If the file or definitions are invalid.
+    """
+    definitions = validate_list(
+        read_json(path), FunctionDefinition, path, "function definition"
     )
-    return validated.functions
 
+    seen_names: set[str] = set()
 
-# to load the data in the prompts file
-def load_prompts(path: str) -> Optional[List[PromptEntry]]:
-    """Load and validate the function_calling_tests.json file."""
-
-    if not os.path.exists(path):
-        print(
-            f"[ERROR] Input prompts file not found: '{path}'",
-            file=sys.stderr,
-        )
-        return None
-
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            raw = json.load(fh)
-    except json.JSONDecodeError as exc:
-        print(
-            f"[ERROR] Input file contains invalid JSON: {exc}",
-            file=sys.stderr,
-        )
-        return None
-    except OSError as exc:
-        print(
-            f"[ERROR] Could not read input file: {exc}",
-            file=sys.stderr,
-        )
-        return None
-
-    if not isinstance(raw, list):
-        print(
-            "[ERROR] Input file must be a JSON array at the top level.",
-            file=sys.stderr,
-        )
-        return None
-
-    prompts: List[PromptEntry] = []
-    skipped = 0
-
-    for idx, entry in enumerate(raw):
-        try:
-            # this will take each object and validate it than return
-            # a PromptEntry object and append it to the list
-            prompts.append(PromptEntry.model_validate(entry))
-        except ValidationError as exc:
-            # here we are not raising an error so the function will not stop
-            print(
-                f"[WARN] Skipping prompt at index {idx} — validation failed: {exc}",
-                file=sys.stderr,
+    for definition in definitions:
+        if definition.name in seen_names:
+            raise InputFileError(
+                f"duplicate function name {definition.name!r} in {path}"
             )
-            skipped += 1
-
-    if not prompts:
-        print("[ERROR] No valid prompts found in input file.", file=sys.stderr)
-        return None
-
-    if skipped:
-        print(f"[WARN] Skipped {skipped} invalid prompt(s).")
-    print(f"[INFO] Loaded {len(prompts)} prompt(s) from '{path}'.")
-
-    return prompts
+        seen_names.add(definition.name)
+    return definitions
 
 
-def write_results(results: List[FunctionCallResult], path: str) -> bool:
-    """Write the list of function call results to a JSON output file."""
+def load_prompt_records(path: Path) -> list[PromptRecord]:
+    """Load and validate natural-language prompt records.
 
-    output_dir = os.path.dirname(path)
-    if output_dir:
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-        except OSError as exc:
-            print(
-                f"[ERROR] Could not create output directory '{output_dir}': {exc}",
-                file=sys.stderr,
-            )
-            return False
+    Args:
+        path: JSON file containing prompt records.
 
-    serialisable = [result.model_dump() for result in results]
+    Returns:
+        Validated prompt records in input order.
 
+    Raises:
+        InputFileError: If the file or records are invalid.
+    """
+    return validate_list(
+        read_json(path), PromptRecord, path, "prompt record"
+    )
+
+
+def write_results(path: Path, results: list[FunctionCallResult]) -> None:
+    """Write results as strict, human-readable JSON.
+
+    Args:
+        path: Destination JSON path.
+        results: Fully validated output records.
+
+    Raises:
+        OutputFileError: If the destination cannot be created or written.
+    """
     try:
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(serialisable, fh, indent=2, ensure_ascii=False)
-            fh.write("\n")
-    except OSError as exc:
-        print(
-            f"[ERROR] Could not write output file '{path}': {exc}",
-            file=sys.stderr,
-        )
-        return False
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"[INFO] Wrote {len(results)} result(s) to '{path}'.")
-    return True
+        payload = [result.model_dump(mode="json") for result in results]
+        
+        with path.open("w", encoding="utf-8", newline="\n") as output_file:
+            json.dump(payload, output_file, ensure_ascii=False, indent=2)
+            output_file.write("\n")
+    except (OSError, TypeError, ValueError) as error:
+        raise OutputFileError(
+            f"could not write output file {path}: {error}"
+        ) from error

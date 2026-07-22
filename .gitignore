@@ -1,0 +1,15 @@
+subject.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Development tools
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Generated application output
+data/output/

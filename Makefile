@@ -4,33 +4,18 @@ install:
 	uv sync
 
 run:
-	uv run python -m src \
-		--functions_definition $(FUNCTIONS_DEF) \
-		--input $(INPUT) \
-		--output $(OUTPUT)
+	uv run python -m src
 
 debug:
-	uv run python -m pdb -m src \
-		--functions_definition $(FUNCTIONS_DEF) \
-		--input $(INPUT) \
-		--output $(OUTPUT)
+	uv run python -m pdb -m src
 
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -name "*.pyc" -delete 2>/dev/null || true
-	find . -name "*.pyo" -delete 2>/dev/null || true
+	uv run python -c "import shutil; from pathlib import Path; [shutil.rmtree(path, ignore_errors=True) for name in ('__pycache__', '.mypy_cache', '.pytest_cache', '.ruff_cache') for path in Path('.').rglob(name)]"
 
 lint:
-	uv run flake8 src/
-	uv run mypy src/ \
-		--warn-return-any \
-		--warn-unused-ignores \
-		--ignore-missing-imports \
-		--disallow-untyped-defs \
-		--check-untyped-defs
+	uv run flake8 .
+	uv run mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
-	uv run flake8 src/
-	uv run mypy src/ --strict
+	uv run flake8 .
+	uv run mypy . --strict

@@ -1,106 +1,107 @@
-from typing import Literal, Dict, Optional, Any, List
-from pydantic import BaseModel, Field, model_validator
+"""Validated data models used by the application."""
 
-JsonSchemaType = Literal["number", "string", "boolean", "integer", "array", "object"]
+from typing import TypeAlias
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-class ParameterSchema(BaseModel):
-    """Schema for a single function parameter."""
-    type: JsonSchemaType = Field(..., description="JSON schema type of the parameter")
+JsonScalar: TypeAlias = str | int | float | bool | None
 
-    model_config = {"extra" : "allow"}
+SUPPORTED_SCALAR_TYPES = frozenset({"boolean", "integer", "number", "string"})
 
 
-class FunctionDefinition(BaseModel):
-    name: str = Field(..., min_length=1, description="Function identifier")
-    description: str = Field(..., description="Human-readable description of the function")
-    parameters: Dict[str, ParameterSchema] = Field(
-        default_factory=dict,
-        description="Mapping parameter names to their schemas"
-    )
-    returns: Optional[ParameterSchema] = Field(
-        default=None,
-        description="Return type schema (this is optional)"
-    )
+class StrictModel(BaseModel):
+    """Base model that rejects fields not declared by the input schema."""
 
-    @model_validator(mode="after")
-    def name_must_not_be_blank(self) -> "FunctionDefinition":
-        """Ensure function name is not just a whitespace only."""
-        if not self.name.strip():
-            raise ValueError("Function name must not be blank")
-        return self
+    model_config = ConfigDict(extra="forbid")
 
 
-class PromptEntry(BaseModel):
-    """A single natural language prompt entry from function_calling_tests.json."""
+class ValueDefinition(StrictModel):
+    """Describe the JSON type of a parameter or return value."""
 
-    prompt: str = Field(..., description="Natural language request to process")
+    type: str
 
-    @model_validator(mode="after")
-    def prompt_must_not_be_blank(self) -> "PromptEntry":
-        """Ensure prompt is not empty or whitespace-only."""
-        if not self.prompt.strip():
-            raise ValueError("Prompt must not be blank")
-        return self
+    @field_validator("type")
+    @classmethod
+    def validate_supported_type(cls, value: str) -> str:
+        """Reject types outside the mandatory scalar scope.
 
+        Args:
+            value: JSON type name supplied by the definitions file.
 
-class FunctionCallResult(BaseModel):
-    """A single function call result written to the output JSON."""
+        Returns:
+            The validated type name.
 
-    prompt: str = Field(..., description="The original natural language request")
-    name: str = Field(..., description="Name of the function to call")
-    parameters: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Resolved argument values keyed by parameter name",
-    )
+        Raises:
+            ValueError: If the type is empty or unsupported.
+        """
+        normalized = value.strip()
 
-    model_config = {"extra": "forbid"}
+        if normalized not in SUPPORTED_SCALAR_TYPES:
+            supported = ", ".join(sorted(SUPPORTED_SCALAR_TYPES))
 
-
-class FunctionDefinitions(BaseModel):
-    """Validated collection of function definitions."""
-
-    functions: List[FunctionDefinition] = Field(
-        ..., description="List of available function definitions"
-    )
-
-    @model_validator(mode="after")
-    def must_have_at_least_one_function(self) -> "FunctionDefinitions":
-        """Ensure there is at least one function defined."""
-        if len(self.functions) == 0:
-            raise ValueError("functions_definition.json must contain at least one function")
-        return self
-
-    def get_by_name(self, name: str) -> Optional[FunctionDefinition]:
-        """Return the FunctionDefinition with the given name, or None."""
-        for fn in self.functions:
-            if fn.name == name:
-                return fn
-        return None
+            raise ValueError(
+                f"unsupported type {value}; supported types: {supported}"
+            )
+        
+        return normalized
 
 
-class PromptList(BaseModel):
-    """Validated list of prompt entries."""
+class FunctionDefinition(StrictModel):
+    """Describe one function available to the language model."""
 
-    prompts: List[PromptEntry] = Field(
-        ..., description="List of natural language prompts to process"
-    )
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    parameters: dict[str, ValueDefinition]
+    returns: ValueDefinition
 
-class GenerationState(BaseModel):
-    """Tracks the state of constrained JSON generation for one function call."""
+    @field_validator("name", "description")
+    @classmethod
+    def reject_blank_text(cls, value: str) -> str:
+        """Reject whitespace-only names and descriptions.
 
-    function_name: str = Field(..., description="The selected function name")
-    current_json: str = Field(default="", description="JSON string built so far")
-    generated_token_ids: List[int] = Field(
-        default_factory=list,
-        description="Token IDs generated so far (appended to prompt IDs)",
-    )
-    is_complete: bool = Field(default=False, description="Whether generation is done")
+        Args:
+            value: Text supplied by the function definition.
 
-    model_config = {"arbitrary_types_allowed": True}
+        Returns:
+            The unchanged non-blank text.
+
+        Raises:
+            ValueError: If the text contains only whitespace.
+        """
+        if not value.strip():
+            raise ValueError("must not be blank")
+        return value
+
+    @field_validator("parameters")
+    @classmethod
+    def reject_blank_parameter_names(
+        cls, value: dict[str, ValueDefinition]
+    ) -> dict[str, ValueDefinition]:
+        """Ensure every parameter has a usable name.
+
+        Args:
+            value: Mapping of parameter names to their definitions.
+
+        Returns:
+            The validated mapping.
+
+        Raises:
+            ValueError: If a parameter name is empty or whitespace-only.
+        """
+        if any(not name.strip() for name in value):
+            raise ValueError("parameter names must not be blank")
+        return value
 
 
-TokenId = int
-Logit = float
-TokenStr = str
-VocabMapping = Dict[TokenId, TokenStr]
+class PromptRecord(StrictModel):
+    """Contain one natural-language request from the input workload."""
+
+    prompt: str
+
+
+class FunctionCallResult(StrictModel):
+    """Represent the exact output object required by the subject."""
+
+    prompt: str
+    name: str
+    parameters: dict[str, JsonScalar]
