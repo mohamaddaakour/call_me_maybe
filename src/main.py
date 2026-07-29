@@ -1,4 +1,4 @@
-"""Executable package entry point for ``python -m src``."""
+"""Command-line entry point for the Call Me Maybe application."""
 
 from .application import main
 

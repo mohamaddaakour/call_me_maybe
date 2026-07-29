@@ -1,12 +1,11 @@
 """Application orchestration and command-line interface."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 from argparse import ArgumentParser
 
 from .errors import ApplicationError, GenerationNotImplementedError
+
 from .io_handler import (
     load_function_definitions,
     load_prompt_records,
@@ -28,7 +27,7 @@ def build_parser() -> ArgumentParser:
     parser = ArgumentParser(
         prog="call_me_maybe",
         description=(
-            "description"
+            "call me maybe"
         )
     )
 

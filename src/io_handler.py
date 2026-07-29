@@ -2,9 +2,9 @@
 
 import json
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar, cast
 
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import BaseModel, ValidationError
 
 from .errors import InputFileError, OutputFileError
 from .models import FunctionCallResult, FunctionDefinition, PromptRecord
@@ -12,7 +12,7 @@ from .models import FunctionCallResult, FunctionDefinition, PromptRecord
 ModelType = TypeVar("ModelType", bound=BaseModel)
 
 
-def read_json(path: Path) -> Any:
+def read_json(path: Path) -> object:
     """Read and decode a UTF-8 JSON file.
 
     Args:
@@ -26,32 +26,34 @@ def read_json(path: Path) -> Any:
     """
     try:
         with path.open("r", encoding="utf-8") as input_file:
-            return json.load(input_file)
-    except FileNotFoundError as error:
-        raise InputFileError(f"input file not found: {path}") from error
-    except PermissionError as error:
+            # json.load() reads the JSON text from the file.
+            # It returns the equivalent Python object.
+            return cast(object, json.load(input_file))
+    except FileNotFoundError:
+        raise InputFileError(f"input file not found: {path}")
+    except PermissionError:
         raise InputFileError(
             f"permission denied while reading: {path}"
-        ) from error
-    except IsADirectoryError as error:
+        )
+    except IsADirectoryError:
         raise InputFileError(
             f"expected a file but found a directory: {path}"
-        ) from error
-    except UnicodeDecodeError as error:
+        )
+    except UnicodeDecodeError:
         raise InputFileError(
             f"input file is not valid UTF-8: {path}"
-        ) from error
+        )
     except json.JSONDecodeError as error:
         location = f"line {error.lineno}, column {error.colno}"
         raise InputFileError(
             f"invalid JSON in {path} at {location}: {error.msg}"
-        ) from error
+        )
     except OSError as error:
-        raise InputFileError(f"could not read {path}: {error}") from error
+        raise InputFileError(f"could not read {path}: {error}")
 
 
 def validate_list(
-    raw_data: Any,
+    raw_data: object,
     model_type: type[ModelType],
     path: Path,
     record_label: str,
@@ -72,26 +74,24 @@ def validate_list(
     """
     if not isinstance(raw_data, list):
         raise InputFileError(f"{path} must contain a top-level JSON array")
-    
-    try:
-        # TypeAdapter is used in pydantic to validate any python data type
-        # including lists elements
-        adapter: TypeAdapter[list[ModelType]] = TypeAdapter(
-            list[model_type]
-        )
 
-        return adapter.validate_python(raw_data)
-    except ValidationError as error:
-        details = error.errors(include_url=False)
-        first_error = details[0]
-        location = ".".join(str(part) for part in first_error["loc"])
-        message = first_error["msg"]
+    validated_items: list[ModelType] = []
+    for index, item in enumerate(raw_data):
+        try:
+            validated_items.append(model_type.model_validate(item))
+        except ValidationError as error:
+            first_error = error.errors(include_url=False)[0]
+            nested_location = ".".join(
+                str(part) for part in first_error["loc"]
+            )
+            location = f"{index}.{nested_location}".rstrip(".")
+            message = first_error["msg"]
 
-        # we used from error because this InputFilterError happens
-        # because of ValidationError
-        raise InputFileError(
-            f"invalid {record_label} in {path} at {location}: {message}"
-        ) from error
+            raise InputFileError(
+                f"invalid {record_label} in {path} at {location}: {message}"
+            )
+
+    return validated_items
 
 
 def load_function_definitions(path: Path) -> list[FunctionDefinition]:
@@ -149,14 +149,18 @@ def write_results(path: Path, results: list[FunctionCallResult]) -> None:
         OutputFileError: If the destination cannot be created or written.
     """
     try:
+        # Will create this directory of the path
+        # with the parents directories.
         path.parent.mkdir(parents=True, exist_ok=True)
 
+        # model_dump converts a Pydantic model object into a Python dictionary.
         payload = [result.model_dump(mode="json") for result in results]
-        
+
         with path.open("w", encoding="utf-8", newline="\n") as output_file:
+            # json.dump converts a Python object into JSON and writes it.
             json.dump(payload, output_file, ensure_ascii=False, indent=2)
             output_file.write("\n")
     except (OSError, TypeError, ValueError) as error:
         raise OutputFileError(
             f"could not write output file {path}: {error}"
-        ) from error
+        )

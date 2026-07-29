@@ -6,12 +6,22 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 JsonScalar: TypeAlias = str | int | float | bool | None
 
+# Here, frozenset creates an immutable set.
+# A normal set is mutable (you can add and remove elements).
+# A frozenset is immutable (once created, it cannot be changed).
 SUPPORTED_SCALAR_TYPES = frozenset({"boolean", "integer", "number", "string"})
 
 
+# Create a base class that all of our models can inherit from.
+# It inherits from Pydantic's BaseModel, which automatically:
+# - Validates data
+# - Converts compatible types
+# - Raises validation errors when data is invalid
 class StrictModel(BaseModel):
     """Base model that rejects fields not declared by the input schema."""
 
+    # Configure how this model behave.
+    # extra="forbid" reject unknown fields by raising a ValidationError.
     model_config = ConfigDict(extra="forbid")
 
 
@@ -20,6 +30,7 @@ class ValueDefinition(StrictModel):
 
     type: str
 
+    # Validating the type field.
     @field_validator("type")
     @classmethod
     def validate_supported_type(cls, value: str) -> str:
@@ -37,19 +48,21 @@ class ValueDefinition(StrictModel):
         normalized = value.strip()
 
         if normalized not in SUPPORTED_SCALAR_TYPES:
-            supported = ", ".join(sorted(SUPPORTED_SCALAR_TYPES))
+            supported = ", ".join(SUPPORTED_SCALAR_TYPES)
 
             raise ValueError(
                 f"unsupported type {value}; supported types: {supported}"
             )
-        
+
         return normalized
 
 
 class FunctionDefinition(StrictModel):
     """Describe one function available to the language model."""
 
+    # Field adds validation rules and metadata to a model field.
     name: str = Field(min_length=1)
+
     description: str = Field(min_length=1)
     parameters: dict[str, ValueDefinition]
     returns: ValueDefinition
