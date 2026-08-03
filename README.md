@@ -9,11 +9,12 @@ into typed function calls. The finished project will use a small language model 
 token-level constrained decoding so that every successful response is valid JSON and
 matches one of the supplied function schemas.
 
-This repository currently implements **Phase 1: Runnable Project Skeleton and
-Validated File I/O**. It provides the command-line interface, pydantic data models,
-input validation, controlled error reporting, and JSON output writing. Model loading,
-function selection, argument generation, and constrained decoding are deliberately not
-implemented in this phase.
+This repository currently implements **Phase 2: SDK Adapter, Vocabulary, and Token
+Inspection**. In addition to validated file I/O, it initializes Qwen/Qwen3-0.6B through
+the supplied SDK, loads and validates the model vocabulary, builds complete model
+context, obtains next-token logits, and greedily selects the highest-scoring token
+represented by the vocabulary. Full function-call generation and constrained decoding
+are deliberately not implemented in this phase.
 
 Phase 1 accepts two JSON arrays:
 
@@ -21,8 +22,10 @@ Phase 1 accepts two JSON arrays:
   parameters, and return type.
 - A prompt array whose records contain a `prompt` string.
 
-An empty prompt array produces `[]`. A non-empty prompt array exits cleanly with the
-message `generation is not implemented in phase 1` instead of inventing results.
+An empty prompt array produces `[]`. For a non-empty workload, the program performs
+one real token inspection and then exits cleanly with a diagnostic containing the
+selected token ID, exact vocabulary text, and logit. It explicitly reports that final
+generation is not supported in Phase 2 instead of inventing results.
 
 ## Instructions
 
@@ -79,7 +82,8 @@ uv run python -m src \
   --output data/output/function_calls.json
 ```
 
-For Phase 1, the prompt file in that successful example must contain an empty array:
+For a successful zero exit status in Phase 2, the prompt file must contain an empty
+array because final generation is not implemented yet:
 
 ```json
 []
@@ -112,25 +116,34 @@ array without comments or trailing commas.
 
 ## Algorithm
 
-Phase 1 performs no generation. Its processing pipeline is:
+Phase 2 performs one diagnostic generation step. Its processing pipeline is:
 
 1. Parse the three command-line paths.
 2. Read both input files as UTF-8 JSON using context managers.
 3. Require a top-level array and validate every record with strict pydantic models.
 4. Reject duplicate function names and unsupported declared types.
-5. Write a valid empty JSON array when there are no prompts; otherwise stop with the
-   explicit Phase 1 limitation.
+5. For a non-empty workload, initialize the supplied SDK and obtain its vocabulary
+   path using only public methods.
+6. Validate the token-to-ID vocabulary and build exact forward and reverse mappings.
+7. Build a prompt containing the user request and every supplied function's name,
+   description, parameter names, and parameter types.
+8. Encode that prompt, obtain logits, validate their compatibility with the
+   vocabulary, and choose the highest-logit vocabulary-backed token.
+9. Report the successful diagnostic and the explicit Phase 2 limitation.
 
 The final constrained decoder is planned to maintain a generation state, test the
 complete text of every candidate vocabulary token against the current JSON/schema
 state, mask invalid logits, and select the highest-logit valid token. It will terminate
 only in an accepting state and independently parse and validate the completed object.
-None of that behavior is claimed as implemented in Phase 1.
+None of that constrained-decoding behavior is claimed as implemented in Phase 2.
 
 ## Design decisions
 
 - `src/__main__.py` is the single executable package boundary.
-- `application.py` separates CLI orchestration from file and model definitions.
+- `application.py` separates CLI orchestration from validation and model inspection.
+- `llm_adapter.py` confines model access to `encode`,
+  `get_logits_from_input_ids`, and `get_path_to_vocab_file`.
+- The copied `llm_sdk` is installed as a local locked dependency.
 - Strict pydantic models reject unknown fields rather than silently ignoring them.
 - Domain-specific exceptions are translated to readable messages at the CLI boundary,
   avoiding tracebacks for expected user errors.
@@ -140,22 +153,20 @@ None of that behavior is claimed as implemented in Phase 1.
 
 ## Performance and reliability
 
-Phase 1 performs linear validation over the number of function definitions and prompt
-records and does not load an LLM. No accuracy measurement applies yet because this
-phase does not select functions or extract arguments. Reliability is instead measured
-by deterministic validation, valid JSON output for an empty workload, controlled
-non-zero exits for invalid input, and passing static checks.
+Phase 2 performs linear input and vocabulary validation plus one model forward pass
+for a non-empty workload. No function-selection accuracy measurement applies yet.
+Reliability is checked through deterministic validation, valid empty output,
+controlled model failures, and tests using adversarial fake SDK responses.
 
 The mandatory final-project targets of at least 90% accuracy and a runtime below five
 minutes cannot be measured until constrained generation is implemented.
 
 ## Challenges faced
 
-The main Phase 1 challenge was defining a strict boundary between accepted input and
-future generation. The application must preserve arbitrary parameter names while
-rejecting malformed schemas, and it must not fabricate output for non-empty workloads.
-Strict nested pydantic models and a dedicated Phase 1 error make that distinction
-explicit.
+The main Phase 2 challenge was keeping model integration behind the SDK's public
+surface while checking that tensor encoding, logits, and vocabulary IDs agree. A
+narrow adapter normalizes SDK values and translates model failures into application
+errors without accessing private SDK state.
 
 Readable validation errors were another concern. The loader reports the array index and
 nested field location from the first pydantic error, giving users an actionable message
@@ -163,14 +174,17 @@ without exposing an internal traceback.
 
 ## Testing strategy
 
-Phase 1 is checked with:
+Phase 2 is checked with:
 
 - A valid empty prompt array, followed by parsing the generated output again with
   Python's `json` module.
 - Malformed JSON and non-array top-level values.
 - Missing and unreadable input paths.
 - Missing fields, extra fields, unsupported types, and duplicate function names.
-- A non-empty prompt array, which must fail cleanly without generating fake calls.
+- SDK initialization failure, corrupt vocabulary data, incompatible logits, greedy
+  permitted-token selection, and complete prompt construction.
+- A non-empty prompt array, which must inspect a token and stop cleanly without
+  generating fake calls.
 - `flake8 .` and the mandatory `mypy` command through `make lint`.
 
 ## Resources
@@ -181,11 +195,10 @@ Phase 1 is checked with:
 - [Pydantic models documentation](https://docs.pydantic.dev/latest/concepts/models/)
 - [mypy documentation](https://mypy.readthedocs.io/)
 - [flake8 documentation](https://flake8.pycqa.org/)
-- The project subject, especially the Phase 1 checklist and README requirements.
+- The project subject, especially the Phase 2 checklist and README requirements.
 
-AI was used to review the Phase 1 implementation against the subject, identify the
-missing module entry point and lint violations, help exercise required error cases, and
-draft this README. The pydantic schemas, file I/O behavior, CLI behavior, and generated
-documentation were then validated against the repository and executable commands; AI
-was not used as a runtime function selector or as a replacement for constrained
-decoding.
+AI was used to review the Phase 2 implementation against the subject, identify SDK
+packaging and adapter issues, help exercise required error cases, and update this
+README. The schemas, file I/O, CLI behavior, vocabulary mapping, and token inspection
+were then validated with executable commands; AI is not used at runtime as a function
+selector or as a replacement for constrained decoding.

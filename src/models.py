@@ -1,7 +1,6 @@
 """Validated data models used by the application."""
 
 from typing import TypeAlias
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 JsonScalar: TypeAlias = str | int | float | bool | None
@@ -14,9 +13,8 @@ SUPPORTED_SCALAR_TYPES = frozenset({"boolean", "integer", "number", "string"})
 
 # Create a base class that all of our models can inherit from.
 # It inherits from Pydantic's BaseModel, which automatically:
-# - Validates data
-# - Converts compatible types
-# - Raises validation errors when data is invalid
+# Validates data, Converts compatible types, Raises validation
+# errors when data is invalid
 class StrictModel(BaseModel):
     """Base model that rejects fields not declared by the input schema."""
 
@@ -26,7 +24,7 @@ class StrictModel(BaseModel):
 
 
 class ValueDefinition(StrictModel):
-    """Describe the JSON type of a parameter or return value."""
+    """Describe a JSON parameter or return value."""
 
     type: str
 
@@ -118,3 +116,19 @@ class FunctionCallResult(StrictModel):
     prompt: str
     name: str
     parameters: dict[str, JsonScalar]
+
+
+class Vocabulary(StrictModel):
+    """Store exact token text and token identifier mappings."""
+
+    token_to_id: dict[str, int]
+    id_to_token: dict[int, str]
+
+
+class TokenInspection(StrictModel):
+    """Describe one verified next-token model prediction."""
+
+    input_ids: list[int]
+    token_id: int
+    token_text: str
+    logit: float

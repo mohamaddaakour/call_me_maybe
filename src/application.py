@@ -5,6 +5,13 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 from .errors import ApplicationError, GenerationNotImplementedError
+from .llm_adapter import (
+    get_vocabulary_path,
+    initialize_model,
+    inspect_next_token,
+)
+from .vocabulary import load_vocabulary
+from .prompt_builder import build_model_prompt
 
 from .io_handler import (
     load_function_definitions,
@@ -21,7 +28,7 @@ def build_parser() -> ArgumentParser:
     """Create the command-line argument parser.
 
     Returns:
-        A configured parser for all Phase 1 options.
+        A configured parser for all application options.
     """
 
     parser = ArgumentParser(
@@ -70,16 +77,25 @@ def run(
     Raises:
         ApplicationError: If validation, generation, or output fails.
     """
-    load_function_definitions(functions_definition_path)
+    definitions = load_function_definitions(functions_definition_path)
 
     prompts = load_prompt_records(input_path)
 
-    if prompts:
-        raise GenerationNotImplementedError(
-            "generation is not implemented in phase 1; "
-            "only empty prompt arrays can be processed"
-        )
-    write_results(output_path, [])
+    if not prompts:
+        write_results(output_path, [])
+        return
+
+    model = initialize_model()
+    vocabulary = load_vocabulary(get_vocabulary_path(model))
+    model_prompt = build_model_prompt(prompts[0].prompt, definitions)
+    inspection = inspect_next_token(model, model_prompt, vocabulary)
+
+    raise GenerationNotImplementedError(
+        "token inspection succeeded "
+        f"(token ID {inspection.token_id}, token {inspection.token_text!r}, "
+        f"logit {inspection.logit}); final generation is not supported "
+        "in phase 2"
+    )
 
 
 def cli(argv: list[str] | None = None) -> int:

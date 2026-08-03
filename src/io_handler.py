@@ -2,10 +2,8 @@
 
 import json
 from pathlib import Path
-from typing import TypeVar, cast
-
+from typing import TypeVar
 from pydantic import BaseModel, ValidationError
-
 from .errors import InputFileError, OutputFileError
 from .models import FunctionCallResult, FunctionDefinition, PromptRecord
 
@@ -27,8 +25,8 @@ def read_json(path: Path) -> object:
     try:
         with path.open("r", encoding="utf-8") as input_file:
             # json.load() reads the JSON text from the file.
-            # It returns the equivalent Python object.
-            return cast(object, json.load(input_file))
+            # It returns the equivalent Python data structure.
+            return json.load(input_file)
     except FileNotFoundError:
         raise InputFileError(f"input file not found: {path}")
     except PermissionError:
@@ -76,6 +74,7 @@ def validate_list(
         raise InputFileError(f"{path} must contain a top-level JSON array")
 
     validated_items: list[ModelType] = []
+
     for index, item in enumerate(raw_data):
         try:
             validated_items.append(model_type.model_validate(item))
@@ -84,7 +83,7 @@ def validate_list(
             nested_location = ".".join(
                 str(part) for part in first_error["loc"]
             )
-            location = f"{index}.{nested_location}".rstrip(".")
+            location = f"{index}.{nested_location}".strip(".")
             message = first_error["msg"]
 
             raise InputFileError(

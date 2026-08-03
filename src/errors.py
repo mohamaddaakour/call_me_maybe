@@ -13,5 +13,17 @@ class OutputFileError(ApplicationError):
     """Raised when the result file cannot be written."""
 
 
+class SDKError(ApplicationError):
+    """Raised when model initialization or a public SDK operation fails."""
+
+
+class VocabularyError(ApplicationError):
+    """Raised when the model vocabulary cannot be loaded or validated."""
+
+
+class TokenInspectionError(ApplicationError):
+    """Raised when encoding, logits, or token selection is inconsistent."""
+
+
 class GenerationNotImplementedError(ApplicationError):
     """Raised for non-empty workloads until generation is implemented."""
