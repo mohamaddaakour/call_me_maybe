@@ -1,1 +1,1 @@
-"""Call Me Maybe function-calling application."""
+"""Function-calling command-line application."""

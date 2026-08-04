@@ -1,71 +1,38 @@
 [
   {
-    "name": "fn_add_numbers",
-    "description": "Add two numbers together and return their sum.",
+    "name": "fn_book_flight",
+    "description": "Book airline seats from an origin city to a destination city.",
     "parameters": {
-      "a": {
-        "type": "number"
-      },
-      "b": {
-        "type": "number"
-      }
+      "origin": {"type": "string"},
+      "destination": {"type": "string"},
+      "passengers": {"type": "integer"}
     },
-    "returns": {
-      "type": "number"
-    }
+    "returns": {"type": "string"}
   },
   {
-    "name": "fn_greet",
-    "description": "Generate a greeting message for a person by name.",
+    "name": "fn_set_alarm",
+    "description": "Set an alarm at a requested time and optionally repeat it daily.",
     "parameters": {
-      "name": {
-        "type": "string"
-      }
+      "time": {"type": "string"},
+      "repeat_daily": {"type": "boolean"}
     },
-    "returns": {
-      "type": "string"
-    }
+    "returns": {"type": "boolean"}
   },
   {
-    "name": "fn_reverse_string",
-    "description": "Reverse a string and return the reversed result.",
+    "name": "fn_convert_temperature",
+    "description": "Convert a temperature value to a requested temperature scale.",
     "parameters": {
-      "s": {
-        "type": "string"
-      }
+      "value": {"type": "number"},
+      "target_scale": {"type": "string"}
     },
-    "returns": {
-      "type": "string"
-    }
+    "returns": {"type": "number"}
   },
   {
-    "name": "fn_get_square_root",
-    "description": "Calculate the square root of a number.",
+    "name": "fn_lookup_product",
+    "description": "Look up a product in the catalog using its SKU identifier.",
     "parameters": {
-      "a": {
-        "type": "number"
-      }
+      "sku": {"type": "string"}
     },
-    "returns": {
-      "type": "number"
-    }
-  },
-  {
-    "name": "fn_substitute_string_with_regex",
-    "description": "Replace all occurrences matching a regex pattern in a string.",
-    "parameters": {
-      "source_string": {
-        "type": "string"
-      },
-      "regex": {
-        "type": "string"
-      },
-      "replacement": {
-        "type": "string"
-      }
-    },
-    "returns": {
-      "type": "string"
-    }
+    "returns": {"type": "string"}
   }
 ]

@@ -1,35 +1,14 @@
 [
   {
-    "prompt": "What is the sum of 2 and 3?"
+    "prompt": "Book a flight from Beirut to Istanbul for 3 passengers"
   },
   {
-    "prompt": "What is the sum of 265 and 345?"
+    "prompt": "Set an alarm for 06:30 and repeat it every day"
   },
   {
-    "prompt": "Greet shrek"
+    "prompt": "Convert 37.5 degrees to Fahrenheit"
   },
   {
-    "prompt": "Greet john"
-  },
-  {
-    "prompt": "Reverse the string 'hello'"
-  },
-  {
-    "prompt": "Reverse the string 'world'"
-  },
-  {
-    "prompt": "What is the square root of 16?"
-  },
-  {
-    "prompt": "Calculate the square root of 144"
-  },
-  {
-    "prompt": "Replace all numbers in \"Hello 34 I'm 233 years old\" with NUMBERS"
-  },
-  {
-    "prompt": "Replace all vowels in 'Programming is fun' with asterisks"
-  },
-  {
-    "prompt": "Substitute the word 'cat' with 'dog' in 'The cat sat on the mat with another cat'"
+    "prompt": "Find the product whose SKU is ZX-4901"
   }
 ]

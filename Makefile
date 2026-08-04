@@ -10,7 +10,7 @@ debug:
 	uv run python -m pdb -m src
 
 clean:
-	uv run python -c "import shutil; from pathlib import Path; [shutil.rmtree(path, ignore_errors=True) for name in ('__pycache__', '.mypy_cache', '.pytest_cache', '.ruff_cache') for path in Path('.').rglob(name)]"
+	python -c "import pathlib, shutil; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').rglob('__pycache__')]; [shutil.rmtree(pathlib.Path(p), ignore_errors=True) for p in ('.mypy_cache', '.pytest_cache', '.ruff_cache')]"
 
 lint:
 	uv run flake8 .

@@ -1,134 +1,87 @@
-"""Validated data models used by the application."""
+"""Validated models for definitions, prompts, and generated calls."""
 
-from typing import TypeAlias
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from __future__ import annotations
 
-JsonScalar: TypeAlias = str | int | float | bool | None
+from typing import Any, Literal
 
-# Here, frozenset creates an immutable set.
-# A normal set is mutable (you can add and remove elements).
-# A frozenset is immutable (once created, it cannot be changed).
-SUPPORTED_SCALAR_TYPES = frozenset({"boolean", "integer", "number", "string"})
+from pydantic import BaseModel, ConfigDict, RootModel, field_validator
+
+JsonType = Literal["string", "number", "integer", "boolean"]
 
 
-# Create a base class that all of our models can inherit from.
-# It inherits from Pydantic's BaseModel, which automatically:
-# Validates data, Converts compatible types, Raises validation
-# errors when data is invalid
-class StrictModel(BaseModel):
-    """Base model that rejects fields not declared by the input schema."""
+class ParameterDefinition(BaseModel):
+    """Describe one required scalar function parameter."""
 
-    # Configure how this model behave.
-    # extra="forbid" reject unknown fields by raising a ValidationError.
     model_config = ConfigDict(extra="forbid")
 
+    type: JsonType
 
-class ValueDefinition(StrictModel):
-    """Describe a JSON parameter or return value."""
+
+class ReturnDefinition(BaseModel):
+    """Describe a function return type."""
+
+    model_config = ConfigDict(extra="allow")
 
     type: str
 
-    # Validating the type field.
-    @field_validator("type")
-    @classmethod
-    def validate_supported_type(cls, value: str) -> str:
-        """Reject types outside the mandatory scalar scope.
 
-        Args:
-            value: JSON type name supplied by the definitions file.
+class FunctionDefinition(BaseModel):
+    """Describe a callable function and its required parameters."""
 
-        Returns:
-            The validated type name.
+    model_config = ConfigDict(extra="forbid")
 
-        Raises:
-            ValueError: If the type is empty or unsupported.
-        """
-        normalized = value.strip()
-
-        if normalized not in SUPPORTED_SCALAR_TYPES:
-            supported = ", ".join(SUPPORTED_SCALAR_TYPES)
-
-            raise ValueError(
-                f"unsupported type {value}; supported types: {supported}"
-            )
-
-        return normalized
-
-
-class FunctionDefinition(StrictModel):
-    """Describe one function available to the language model."""
-
-    # Field adds validation rules and metadata to a model field.
-    name: str = Field(min_length=1)
-
-    description: str = Field(min_length=1)
-    parameters: dict[str, ValueDefinition]
-    returns: ValueDefinition
+    name: str
+    description: str
+    parameters: dict[str, ParameterDefinition]
+    returns: ReturnDefinition
 
     @field_validator("name", "description")
     @classmethod
-    def reject_blank_text(cls, value: str) -> str:
-        """Reject whitespace-only names and descriptions.
-
-        Args:
-            value: Text supplied by the function definition.
-
-        Returns:
-            The unchanged non-blank text.
-
-        Raises:
-            ValueError: If the text contains only whitespace.
-        """
+    def reject_empty_text(cls, value: str) -> str:
+        """Reject blank function names and descriptions."""
         if not value.strip():
             raise ValueError("must not be blank")
         return value
 
-    @field_validator("parameters")
+
+class FunctionDefinitions(RootModel[list[FunctionDefinition]]):
+    """Represent the complete non-empty function catalog."""
+
+    @field_validator("root")
     @classmethod
-    def reject_blank_parameter_names(
-        cls, value: dict[str, ValueDefinition]
-    ) -> dict[str, ValueDefinition]:
-        """Ensure every parameter has a usable name.
-
-        Args:
-            value: Mapping of parameter names to their definitions.
-
-        Returns:
-            The validated mapping.
-
-        Raises:
-            ValueError: If a parameter name is empty or whitespace-only.
-        """
-        if any(not name.strip() for name in value):
-            raise ValueError("parameter names must not be blank")
+    def validate_catalog(
+        cls, value: list[FunctionDefinition]
+    ) -> list[FunctionDefinition]:
+        """Ensure the catalog is non-empty and function names are unique."""
+        if not value:
+            raise ValueError("at least one function definition is required")
+        names = [definition.name for definition in value]
+        if len(names) != len(set(names)):
+            raise ValueError("function names must be unique")
         return value
 
 
-class PromptRecord(StrictModel):
-    """Contain one natural-language request from the input workload."""
+class PromptInput(BaseModel):
+    """Represent one natural-language function-calling request."""
+
+    model_config = ConfigDict(extra="forbid")
 
     prompt: str
 
 
-class FunctionCallResult(StrictModel):
-    """Represent the exact output object required by the subject."""
+class PromptInputs(RootModel[list[PromptInput]]):
+    """Represent the list of requests read from the input file."""
+
+
+class FunctionCallResult(BaseModel):
+    """Represent one schema-compliant function call."""
+
+    model_config = ConfigDict(extra="forbid")
 
     prompt: str
     name: str
-    parameters: dict[str, JsonScalar]
+    parameters: dict[str, Any]
 
 
-class Vocabulary(StrictModel):
-    """Store exact token text and token identifier mappings."""
-
-    token_to_id: dict[str, int]
-    id_to_token: dict[int, str]
-
-
-class TokenInspection(StrictModel):
-    """Describe one verified next-token model prediction."""
-
-    input_ids: list[int]
-    token_id: int
-    token_text: str
-    logit: float
+class FunctionCallResults(RootModel[list[FunctionCallResult]]):
+    """Represent all calls written to the output file."""
