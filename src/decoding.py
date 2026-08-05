@@ -38,6 +38,7 @@ def _chat_prompt(system: str, user: str) -> str:
 def _encode_choice(model: Any, value: str) -> list[int]:
     """Encode one non-empty constrained choice."""
     raw_ids = cast(list[list[int]], model.encode(value).tolist())
+
     if not raw_ids or not raw_ids[0]:
         raise DecodingError(f"cannot tokenize constrained value: {value!r}")
     return [int(token_id) for token_id in raw_ids[0]]
@@ -56,6 +57,7 @@ def choose_function(
     """
     if not definitions:
         raise DecodingError("cannot choose from an empty function catalog")
+    
     if len(definitions) == 1:
         return definitions[0]
 
@@ -63,21 +65,26 @@ def choose_function(
         f"- {definition.name}: {definition.description}"
         for definition in definitions
     )
+    
     user = (
         "Choose the single available function that best handles the request. "
         "Return only its exact function name.\n\n"
         f"Available functions:\n{catalog}\n\n"
         f"Request: {prompt}\nFunction name:"
     )
+
     input_ids = _encode(
         model,
         _chat_prompt("You route requests to supplied functions.", user),
     )
+
     choices = {
         definition.name: _encode_choice(model, definition.name)
         for definition in definitions
     }
+
     selected_name = _decode_choice(model, input_ids, choices)
+
     return next(
         definition
         for definition in definitions
@@ -122,10 +129,12 @@ def generate_parameters(
 ) -> dict[str, Any]:
     """Generate every parameter independently under its declared scalar grammar."""
     parameters: dict[str, Any] = {}
+
     signature = ", ".join(
         f"{name}: {definition.type}"
         for name, definition in function.parameters.items()
     )
+
     for name, definition in function.parameters.items():
         parameters[name] = _generate_scalar(
             model,
@@ -150,6 +159,7 @@ def _generate_scalar(
 ) -> Any:
     """Generate one value while allowing only its declared JSON scalar type."""
     previous_json = json.dumps(previous_parameters, ensure_ascii=False)
+
     user = (
         f"Selected function: {function.name}({signature})\n"
         f"Description: {function.description}\n"
@@ -222,22 +232,6 @@ def _parse_scalar(text: str, value_type: JsonType) -> Any:
     if not valid:
         raise DecodingError(f"generated value does not match type {value_type}")
     return value
-
-
-def _parse_parameters(
-    text: str, function: FunctionDefinition
-) -> dict[str, Any]:
-    """Parse and defensively validate a completed parameter object."""
-    try:
-        value = json.loads(text)
-    except json.JSONDecodeError as error:
-        raise DecodingError("constrained output was not valid JSON") from error
-    if not isinstance(value, dict):
-        raise DecodingError("constrained parameters were not an object")
-    parameters = cast(dict[str, Any], value)
-    if list(parameters) != list(function.parameters):
-        raise DecodingError("constrained parameter keys did not match the schema")
-    return parameters
 
 
 def object_prefix_status(

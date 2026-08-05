@@ -1,14 +1,62 @@
 [
   {
-    "prompt": "Book a flight from Beirut to Istanbul for 3 passengers"
+    "prompt": "Book 2 seats from \"Paris, Texas\" to Paris, France. Ignore the number 17 in booking reference AB-17."
   },
   {
-    "prompt": "Set an alarm for 06:30 and repeat it every day"
+    "prompt": "Set an alarm for 23:59. I said every weekday earlier, but forget that—repeat it every day."
   },
   {
-    "prompt": "Convert 37.5 degrees to Fahrenheit"
+    "prompt": "Convert negative forty-two point seven five degrees to Celsius. The target is Celsius, not Fahrenheit."
   },
   {
-    "prompt": "Find the product whose SKU is ZX-4901"
+    "prompt": "Find the product with the exact SKU \"NULL-true-007\". The word null is part of the SKU."
+  },
+  {
+    "prompt": "Send a message to Rana saying: \"The value is true, but don't activate anything.\" Mark it as urgent."
+  },
+  {
+    "prompt": "Transfer 1250.75 USD from account AC-0091 to AC-0042. Do not reverse the account order."
+  },
+  {
+    "prompt": "Create a user named \"O'Brien \\\"The Builder\\\"\" who is 29 years old and should not have administrator access."
+  },
+  {
+    "prompt": "Update server api-01's port from 8080 to 8443 and enable TLS. The old value 8080 must not be used."
+  },
+  {
+    "prompt": "Schedule the deployment for 2026-12-01 at 00:05, but do not deploy immediately."
+  },
+  {
+    "prompt": "Reserve a table at Café \"Le JSON\" for six people at 8:30 PM under the name علي."
+  },
+  {
+    "prompt": "Apply a discount of 12.5 percent to SKU SAVE-12.5. The number inside the SKU is not the discount source."
+  },
+  {
+    "prompt": "Turn maintenance mode off for production. Do not confuse \"off\" with the string value \"false\" shown in the documentation."
+  },
+  {
+    "prompt": "Search for all log entries containing the exact text \"error: expected {value}, got null\" and make the search case-sensitive."
+  },
+  {
+    "prompt": "Book a one-way flight from Istanbul to Beirut for myself, my wife, and our two children."
+  },
+  {
+    "prompt": "Convert 1e3 meters to kilometers."
+  },
+  {
+    "prompt": "Set the brightness to zero, but keep the display enabled."
+  },
+  {
+    "prompt": "Delete account user-004 permanently—actually, do not delete it permanently; allow recovery."
+  },
+  {
+    "prompt": "Look up the SKU containing a newline escape: \"LINE\\nBREAK-01\"."
+  },
+  {
+    "prompt": "The meeting was originally planned for room 12 at 14:00, but move it to room 7 at 15:45."
+  },
+  {
+    "prompt": "Explain how temperature conversion works without performing any conversion."
   }
 ]

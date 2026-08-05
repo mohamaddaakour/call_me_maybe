@@ -1,13 +1,10 @@
 """Command-line entry point for the function-calling application."""
 
 from __future__ import annotations
-
 import argparse
 from pathlib import Path
 import sys
-
 from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
-
 from src.decoding import DecodingError
 from src.files import InputFileError, load_model, write_model
 from src.models import FunctionDefinitions, PromptInputs

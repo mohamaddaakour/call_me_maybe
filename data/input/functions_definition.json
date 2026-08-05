@@ -1,38 +1,287 @@
 [
   {
     "name": "fn_book_flight",
-    "description": "Book airline seats from an origin city to a destination city.",
+    "description": "Book airline seats from an origin location to a destination location. The passenger count must include every traveler mentioned.",
     "parameters": {
-      "origin": {"type": "string"},
-      "destination": {"type": "string"},
-      "passengers": {"type": "integer"}
+      "origin": {
+        "type": "string"
+      },
+      "destination": {
+        "type": "string"
+      },
+      "passengers": {
+        "type": "integer"
+      },
+      "one_way": {
+        "type": "boolean"
+      }
     },
-    "returns": {"type": "string"}
+    "returns": {
+      "type": "string"
+    }
   },
   {
     "name": "fn_set_alarm",
-    "description": "Set an alarm at a requested time and optionally repeat it daily.",
+    "description": "Set an alarm at a specific time and optionally repeat it every day.",
     "parameters": {
-      "time": {"type": "string"},
-      "repeat_daily": {"type": "boolean"}
+      "time": {
+        "type": "string"
+      },
+      "repeat_daily": {
+        "type": "boolean"
+      }
     },
-    "returns": {"type": "boolean"}
+    "returns": {
+      "type": "boolean"
+    }
   },
   {
     "name": "fn_convert_temperature",
-    "description": "Convert a temperature value to a requested temperature scale.",
+    "description": "Convert a numeric temperature value into Celsius, Fahrenheit, or Kelvin.",
     "parameters": {
-      "value": {"type": "number"},
-      "target_scale": {"type": "string"}
+      "value": {
+        "type": "number"
+      },
+      "target_scale": {
+        "type": "string"
+      }
     },
-    "returns": {"type": "number"}
+    "returns": {
+      "type": "number"
+    }
+  },
+  {
+    "name": "fn_convert_distance",
+    "description": "Convert a numeric distance from one unit to another.",
+    "parameters": {
+      "value": {
+        "type": "number"
+      },
+      "source_unit": {
+        "type": "string"
+      },
+      "target_unit": {
+        "type": "string"
+      }
+    },
+    "returns": {
+      "type": "number"
+    }
   },
   {
     "name": "fn_lookup_product",
-    "description": "Look up a product in the catalog using its SKU identifier.",
+    "description": "Find exactly one catalog product using its complete SKU identifier. Preserve all characters in the SKU.",
     "parameters": {
-      "sku": {"type": "string"}
+      "sku": {
+        "type": "string"
+      }
     },
-    "returns": {"type": "string"}
+    "returns": {
+      "type": "string"
+    }
+  },
+  {
+    "name": "fn_send_message",
+    "description": "Send an exact text message to a named recipient.",
+    "parameters": {
+      "recipient": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "urgent": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
+  },
+  {
+    "name": "fn_transfer_money",
+    "description": "Transfer a numeric amount in a specified currency from one account to another.",
+    "parameters": {
+      "source_account": {
+        "type": "string"
+      },
+      "destination_account": {
+        "type": "string"
+      },
+      "amount": {
+        "type": "number"
+      },
+      "currency": {
+        "type": "string"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
+  },
+  {
+    "name": "fn_create_user",
+    "description": "Create a user with a display name, age, and administrator-access setting.",
+    "parameters": {
+      "display_name": {
+        "type": "string"
+      },
+      "age": {
+        "type": "integer"
+      },
+      "is_admin": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "string"
+    }
+  },
+  {
+    "name": "fn_update_server",
+    "description": "Change the active network port and TLS setting of a named server.",
+    "parameters": {
+      "server_name": {
+        "type": "string"
+      },
+      "port": {
+        "type": "integer"
+      },
+      "tls_enabled": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
+  },
+  {
+    "name": "fn_schedule_deployment",
+    "description": "Schedule a deployment for a specified date and time, without necessarily executing it immediately.",
+    "parameters": {
+      "date": {
+        "type": "string"
+      },
+      "time": {
+        "type": "string"
+      },
+      "deploy_immediately": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "string"
+    }
+  },
+  {
+    "name": "fn_reserve_table",
+    "description": "Reserve a restaurant table using the restaurant name, guest count, time, and reservation name.",
+    "parameters": {
+      "restaurant": {
+        "type": "string"
+      },
+      "guests": {
+        "type": "integer"
+      },
+      "time": {
+        "type": "string"
+      },
+      "reservation_name": {
+        "type": "string"
+      }
+    },
+    "returns": {
+      "type": "string"
+    }
+  },
+  {
+    "name": "fn_apply_discount",
+    "description": "Apply a percentage discount to exactly one product SKU.",
+    "parameters": {
+      "sku": {
+        "type": "string"
+      },
+      "percentage": {
+        "type": "number"
+      }
+    },
+    "returns": {
+      "type": "number"
+    }
+  },
+  {
+    "name": "fn_set_maintenance_mode",
+    "description": "Enable or disable maintenance mode for a named environment.",
+    "parameters": {
+      "environment": {
+        "type": "string"
+      },
+      "enabled": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
+  },
+  {
+    "name": "fn_search_logs",
+    "description": "Search logs for an exact text query with optional case-sensitive matching.",
+    "parameters": {
+      "query": {
+        "type": "string"
+      },
+      "case_sensitive": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "string"
+    }
+  },
+  {
+    "name": "fn_set_brightness",
+    "description": "Set a display brightness level while controlling whether the display remains enabled.",
+    "parameters": {
+      "level": {
+        "type": "integer"
+      },
+      "display_enabled": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
+  },
+  {
+    "name": "fn_delete_account",
+    "description": "Delete an account and specify whether deletion is permanent or recoverable.",
+    "parameters": {
+      "account_id": {
+        "type": "string"
+      },
+      "permanent": {
+        "type": "boolean"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
+  },
+  {
+    "name": "fn_reschedule_meeting",
+    "description": "Move an existing meeting to a new room and time. Use only the final requested room and time.",
+    "parameters": {
+      "room": {
+        "type": "integer"
+      },
+      "time": {
+        "type": "string"
+      }
+    },
+    "returns": {
+      "type": "boolean"
+    }
   }
 ]

@@ -21,6 +21,7 @@ def generate_calls(
 ) -> FunctionCallResults:
     """Generate one fully validated call for every input prompt."""
     results: list[FunctionCallResult] = []
+    
     for prompt_item in prompts.root:
         function = choose_function(model, prompt_item.prompt, definitions.root)
         parameters = generate_parameters(model, prompt_item.prompt, function)
