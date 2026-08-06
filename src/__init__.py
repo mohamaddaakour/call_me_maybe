@@ -1,1 +1,1 @@
-"""Function-calling command-line application."""
+"""Function calling application using Qwen LLM"""
