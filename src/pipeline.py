@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any
 
+from src import grammar
 from src.decoding import generate_parameters, generate_selection
 from src.errors import DecodingError
 from src.models import (
@@ -59,6 +61,14 @@ def _validate_parameters(
             )
 
 
+def _placeholder_parameters(definition: FunctionDefinition) -> dict[str, Any]:
+    """Give every declared parameter the empty value of its type."""
+    return {
+        parameter_name: grammar.placeholder(parameter.type)
+        for parameter_name, parameter in definition.parameters.items()
+    }
+
+
 def generate_calls(
     model: Any,
     definitions: FunctionDefinitions,
@@ -73,19 +83,41 @@ def generate_calls(
 
     Returns:
         an object model that contain a list of function call
+
+    One prompt the model cannot resolve does not end the run. The output
+    file owes every prompt a schema-valid object, so a failed one falls
+    back to empty values and the reason is reported on stderr.
     """
     results: list[FunctionCallResult] = []
 
     for prompt_item in prompts.root:
-        # The model still makes the choice, but the grammar leaves it no way
-        # to name a function the catalog does not contain
-        definition = generate_selection(
-            model, prompt_item.prompt, definitions.root
-        )
+        definition: FunctionDefinition | None = None
 
-        parameters = generate_parameters(model, prompt_item.prompt, definition)
+        try:
+            # The model still makes the choice, but the grammar leaves it no
+            # way to name a function the catalog does not contain
+            definition = generate_selection(
+                model, prompt_item.prompt, definitions.root
+            )
 
-        _validate_parameters(definition, parameters)
+            parameters = generate_parameters(
+                model, prompt_item.prompt, definition
+            )
+
+            _validate_parameters(definition, parameters)
+
+        except DecodingError as error:
+            # A failure before any choice was made still needs a name from
+            # the catalog, so the first entry stands in for it
+            if definition is None:
+                definition = definitions.root[0]
+
+            parameters = _placeholder_parameters(definition)
+
+            print(
+                f"warning: {prompt_item.prompt!r}: {error}",
+                file=sys.stderr,
+            )
 
         results.append(
             FunctionCallResult(

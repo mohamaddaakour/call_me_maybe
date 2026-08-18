@@ -47,6 +47,25 @@ def load_model(path: Path, model_type: type[ModelT]) -> ModelT:
         raise InputFileError(f"cannot read {path}: {error}") from error
 
 
+def prepare_destination(path: Path) -> None:
+    """Create the output directory before the expensive work starts.
+
+    Args:
+        path: Destination JSON path.
+
+    Raises:
+        InputFileError: If the directory cannot be created.
+
+    Generation takes minutes, and a destination that cannot be created is
+    just as fatal after it as before it. Finding out first costs nothing
+    and saves the user a run whose result had nowhere to go.
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise InputFileError(f"cannot write {path}: {error}") from error
+
+
 def write_model(path: Path, model: BaseModel) -> None:
     """Atomically write the result to this path.
 
@@ -65,11 +84,15 @@ def write_model(path: Path, model: BaseModel) -> None:
         # Create the directory with the parent directories
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        with temporary_path.open("w", encoding="utf-8", newline="\n") as output:
+        with temporary_path.open(
+            "w", encoding="utf-8", newline="\n"
+        ) as output:
             # model_dump() converts the pydantic model to a plain Python dict
-            # json.dump() convert from python dict to a json format and write it
-            # to the file
-            json.dump(model.model_dump(), output, indent=2, ensure_ascii=False)
+            # json.dump() converts that dict to JSON text and writes it to
+            # the file
+            json.dump(
+                model.model_dump(), output, indent=2, ensure_ascii=False
+            )
             output.write("\n")
 
         # replace() is atomic on both POSIX and Windows

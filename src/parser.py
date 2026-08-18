@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Pasrse input and output paths from command line"""
+    """Parse input and output paths from the command line"""
     parser = argparse.ArgumentParser(
-        description="Translate prompts into mathced function calls"
+        description="Translate prompts into matched function calls"
     )
 
     # `type=Path` will take the string from the command line and

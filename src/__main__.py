@@ -6,19 +6,25 @@ import sys
 
 from llm_sdk import Small_LLM_Model
 from src.errors import DecodingError, InputFileError
-from src.files import load_model, write_model
+from src.files import load_model, prepare_destination, write_model
 from src.models import FunctionDefinitions, PromptInputs
 from src.parser import parse_arguments
 from src.pipeline import generate_calls
 
 
 def main() -> int:
-    """Validate the input files and generate the output with matched functions"""
+    """Validate the input files and write the matched function calls"""
     arguments = parse_arguments()
 
     try:
-        definitions = load_model(arguments.functions_definition, FunctionDefinitions)
+        definitions = load_model(
+            arguments.functions_definition, FunctionDefinitions
+        )
         prompts = load_model(arguments.input, PromptInputs)
+
+        # Checked before the model is loaded, so a destination that cannot
+        # be created fails in a second instead of after minutes of decoding
+        prepare_destination(arguments.output)
 
         # We called the Qwen model
         model = Small_LLM_Model()

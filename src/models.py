@@ -16,9 +16,14 @@ class ParameterDefinition(BaseModel):
     Attributes:
         type: JSON type name of the parameter, e.g. "string" or "integer".
     """
-    # We add a configuration to this model
-    # any other parameter is forbidden
-    model_config = ConfigDict(extra="forbid")
+
+    # Catalogs commonly carry per-parameter documentation such as
+    # "description" or "default". Those say nothing about the grammar this
+    # program builds, so they are ignored rather than rejected: a catalog
+    # richer than the example must still run. The type itself stays a
+    # Literal, because an unsupported one has to fail loudly instead of
+    # being decoded under the wrong grammar.
+    model_config = ConfigDict(extra="ignore")
 
     type: JsonType
 
@@ -41,16 +46,18 @@ class FunctionDefinition(BaseModel):
     Attributes:
         name: Unique function name used when emitting a call.
         description: Natural-language summary of what the function does.
-        parameters: Mapping of parameter name to its type definition; all are required.
-        returns: Type definition of the function's return value.
+        parameters: Parameter name to type definition; all are required.
+        returns: Declared return type, when the catalog states one.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     name: str
     description: str
     parameters: dict[str, ParameterDefinition]
-    returns: ReturnDefinition
+    # The program never calls the function, so the return type is read for
+    # completeness only and a catalog that omits it is still usable
+    returns: ReturnDefinition | None = None
 
     # Validating these 2 fields name and description
     # they should not be empty
@@ -69,7 +76,7 @@ class FunctionDefinitions(RootModel[list[FunctionDefinition]]):
     """Represent the complete non-empty function catalog.
 
     Attributes:
-        root: List of function definitions; must be non-empty with unique names.
+        root: Function definitions; non-empty, with unique names.
     """
 
     @field_validator("root")
@@ -97,7 +104,9 @@ class PromptInput(BaseModel):
         prompt: The user's request text to resolve into a function call.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    # A test file may carry its own bookkeeping next to the prompt, such as
+    # an id or an expected answer, and none of it should stop the run
+    model_config = ConfigDict(extra="ignore")
 
     prompt: str
 
@@ -116,7 +125,7 @@ class FunctionCallResult(BaseModel):
     Attributes:
         prompt: The original request text this call was generated from.
         name: Name of the selected function from the catalog.
-        parameters: Argument values keyed by parameter name, matching the schema types.
+        parameters: Argument values by name, typed as the schema declares.
     """
 
     model_config = ConfigDict(extra="forbid")

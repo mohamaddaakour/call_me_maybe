@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from src.models import JsonType
 
@@ -110,6 +111,21 @@ def is_complete(text: str, json_type: JsonType) -> bool:
     return _NUMBER.fullmatch(text) is not None
 
 
+def is_closed(text: str, json_type: JsonType) -> bool:
+    """Report whether a finished value can no longer be extended.
+
+    A closed value ends the decoding loop without spending a forward pass
+    on a token that the grammar would reject anyway. A complete string or
+    boolean is closed: nothing may follow the final quote, and neither
+    "true" nor "false" is the prefix of a longer word. A number never is,
+    because "1" can still become "1.5".
+    """
+    if json_type in ("integer", "number"):
+        return False
+
+    return is_complete(text, json_type)
+
+
 def prefill(json_type: JsonType) -> str:
     """Give the model the part of the value that is structure, not content.
 
@@ -117,3 +133,21 @@ def prefill(json_type: JsonType) -> str:
     model removes the one place it likes to answer with prose instead.
     """
     return '"' if json_type == "string" else ""
+
+
+def placeholder(json_type: JsonType) -> Any:
+    """Give the empty value of a type, used when decoding cannot finish.
+
+    A prompt the model cannot answer still owes the output file one
+    schema-valid object, so the value is empty rather than absent.
+    """
+    if json_type == "string":
+        return ""
+
+    if json_type == "boolean":
+        return False
+
+    if json_type == "integer":
+        return 0
+
+    return 0.0
