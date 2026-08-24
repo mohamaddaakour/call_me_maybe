@@ -1,5 +1,7 @@
 .PHONY: install run debug clean lint lint-strict
 
+# Strip shell overrides so the settings in pyproject.toml and
+# src/__init__.py win: .venv, .uv-cache and .hf-cache stay in-project.
 UV = env -u VIRTUAL_ENV -u UV_CACHE_DIR -u HF_HOME uv
 
 install:
