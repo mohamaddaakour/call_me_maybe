@@ -43,11 +43,6 @@ def _chat_prompt(user: str, assistant: str = "") -> str:
     this text, so anything the model must continue from has to sit after
     `<|im_start|>assistant`. Left in the user turn it would be closed off
     by `<|im_end|>`, and the model would start a fresh answer instead.
-
-    There is no system turn. The SDK exposes no cache, so the whole prompt
-    is read again for every single generated token and its length is the
-    runtime. A separate turn costs its own markers to say what the user
-    turn can say in the same words, so everything is said once, there.
     """
     return (
         "<|im_start|>user\n"
@@ -100,13 +95,6 @@ def _value_prompt(
         definition: The function the model already selected
         parameter_name: The parameter whose value we are asking for
         known: The values decoded so far, so the model does not repeat them
-
-    A small model reads the request as a question and answers it: asked for
-    the argument of "the sum of 2 and 3" it replies 5, and asked to reverse
-    "hello" it replies "olleh". Naming the task as filling an argument, and
-    forbidding computation before the request is ever shown, is what stops
-    it; measured on the sample suite it is the difference between two of
-    eight simple prompts correct and eight of eight.
     """
     parameter_type = definition.parameters[parameter_name].type
 
@@ -147,12 +135,6 @@ def _next_allowed_token(
     Returns:
         The chosen token and the text it produces, or None when the answer
         is finished and the model wants to move on.
-
-    The vocabulary holds about 150k entries, and a step under a narrow
-    grammar can reject hundreds of tokens before one fits. Ranking the
-    scores once with numpy, instead of rescanning a Python list for the
-    next best after every rejection, is what keeps that search off the
-    clock.
     """
     ranked = np.argsort(-np.asarray(logits, dtype=np.float32))
 
@@ -190,10 +172,6 @@ def _decode_constrained(
         finished: Reports whether a text is already a legal answer
         closed: Reports whether no legal answer extends this text
         max_tokens: How far to go before giving up
-
-    A forward pass over the whole sequence is by far the most expensive
-    step here, so a text the grammar can no longer extend ends the loop
-    before one is spent asking the model to confirm what is already known.
     """
     input_ids = _encode(model, prompt_text + prefill)
 
@@ -273,17 +251,9 @@ def generate_selection(
     name = _decode_constrained(
         model,
         _chat_prompt(_routing_prompt(prompt, definitions)),
-        # Nothing is written for the model here. Prefilling a prefix the
-        # names share, such as "fn_", looks like a free saving but splits
-        # the name across a token boundary the model never sees in text,
-        # and its scores after it are noise: it answered fn_get_square_root
-        # to "Greet shrek". Started clean, the first token it wants is
-        # "fn" and the routing is right.
         "",
         lambda text: bool(candidates(text)),
         lambda text: text in by_name,
-        # Once one name is the only one left, the rest of it is spelling
-        # rather than choice, and the model has nothing further to decide
         lambda text: len(candidates(text)) == 1,
         MAX_NAME_TOKENS,
     )

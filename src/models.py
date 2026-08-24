@@ -17,12 +17,6 @@ class ParameterDefinition(BaseModel):
         type: JSON type name of the parameter, e.g. "string" or "integer".
     """
 
-    # Catalogs commonly carry per-parameter documentation such as
-    # "description" or "default". Those say nothing about the grammar this
-    # program builds, so they are ignored rather than rejected: a catalog
-    # richer than the example must still run. The type itself stays a
-    # Literal, because an unsupported one has to fail loudly instead of
-    # being decoded under the wrong grammar.
     model_config = ConfigDict(extra="ignore")
 
     type: JsonType

@@ -83,10 +83,6 @@ def generate_calls(
 
     Returns:
         an object model that contain a list of function call
-
-    One prompt the model cannot resolve does not end the run. The output
-    file owes every prompt a schema-valid object, so a failed one falls
-    back to empty values and the reason is reported on stderr.
     """
     results: list[FunctionCallResult] = []
 
