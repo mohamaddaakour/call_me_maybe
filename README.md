@@ -21,6 +21,11 @@ Python 3.10 or newer and [uv](https://docs.astral.sh/uv/) are required. The firs
 run downloads Qwen/Qwen3-0.6B, so it also requires an internet connection and enough
 memory for the model.
 
+The project decodes on the CPU, so `torch` is pinned to the CPU-only wheel index in
+`pyproject.toml`. The default PyPI wheel additionally pulls the CUDA runtime
+(`nvidia-*`, `triton`): 2.2 GB of downloads for code this project never executes.
+Pinning it keeps the environment at roughly 1.1 GB installed.
+
 ```sh
 make install
 make run
@@ -31,6 +36,16 @@ The direct equivalent is:
 ```sh
 uv sync
 uv run python -m src
+```
+
+On a machine whose home directory is too small for that environment, point `.venv`
+at a volume that has room before syncing. `uv` follows the link and installs on the
+far side of it, and the model cache can be moved the same way with `HF_HOME`:
+
+```sh
+mkdir -p /path/with/room/call-me-maybe
+ln -sfn /path/with/room/call-me-maybe .venv
+uv sync
 ```
 
 Custom paths are supported:
@@ -179,8 +194,9 @@ and exposes no cache interface, so the number of forward passes and the length o
 each prompt are the only things worth optimising. Measured on a CPU-only machine
 (10 threads, float32, the slowest path the SDK offers), the full sample suite runs
 in **2 minutes 4 seconds** end to end, including roughly 25 seconds to load the
-model — comfortably inside the five-minute budget, and CUDA or Apple silicon takes
-the SDK's reduced-precision path and is faster still. Getting there was three
+model — comfortably inside the five-minute budget. That CPU path is the one the
+pinned wheel provides everywhere; on Apple silicon the SDK picks `mps` and its
+reduced-precision path, which is faster still. Getting there was three
 changes: ending generation at a closed value and at a uniquely identified function
 name, ranking each step once with numpy instead of rescanning the vocabulary after
 every rejection, and an argument prompt short enough to keep each pass cheap. The
