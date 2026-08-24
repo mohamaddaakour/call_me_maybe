@@ -15,30 +15,24 @@ dev = [
     "mypy>=1.10",
 ]
 
-# The supplied SDK joins the workspace so the torch pin below reaches it.
-# Sources declared on the workspace root apply to every member's dependencies,
-# which is what lets us redirect the SDK's torch requirement.
 [tool.uv.workspace]
 members = ["llm_sdk"]
 
 [tool.uv.sources]
 llm-sdk = { workspace = true }
-# The project runs entirely on CPU, so torch comes from the CPU-only wheel
-# index. The default PyPI wheel drags in the CUDA runtime (nvidia-*, triton),
-# which is several gigabytes of code this project never executes.
 torch = [{ index = "pytorch-cpu" }]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
-# Only requirements that name this index explicitly are resolved against it
 explicit = true
 
-[tool.mypy]
-exclude = ["llm_sdk/"]
+[tool.uv]
+cache-dir = ".uv-cache"
 
-# The SDK is supplied code with no type information, so treat it as untyped
-# instead of type-checking it
+[tool.mypy]
+exclude = ["llm_sdk/", "\\.uv-cache/", "\\.hf-cache/"]
+
 [[tool.mypy.overrides]]
 module = ["llm_sdk", "llm_sdk.*"]
 follow_imports = "skip"

@@ -1,3 +1,0 @@
-[flake8]
-exclude = .git,.venv,llm_sdk
-max-line-length = 79

@@ -1,6 +1,9 @@
 __pycache__/
 *.py[cod]
-.venv/
+# No trailing slash: this has to match a symlinked environment too
+.venv
+.uv-cache/
+.hf-cache/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/

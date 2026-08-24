@@ -293,9 +293,7 @@ The repository contains progressive executable branches: `phase-1-skeleton`,
 
 AI was used to help review the subject requirements, explore constrained-decoding
 designs, draft documentation, and propose tests. Every generated
-part was implemented, reviewed, linted, type-checked, and exercised locally; an inaccurate
-single-letter routing experiment and weak extraction prompts were identified through
-real model tests and replaced.
+part was implemented, reviewed, linted, type-checked, and exercised locally.
 
 End-to-end tests run demonstration prompts through Qwen/Qwen3-0.6B and independently
 validate each name, required parameter set, and type against the input catalog.
